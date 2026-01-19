@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+
+APP=$1
+
+usage(){
+	cat <<-EOS
+		 Usage: $(basename "$0") <App Name>
+		  Pass $(basename "$0") an app name and it will display a list of 
+		  that app's windows. Select a window and it will become 
+		  the frontmost for that app.
+		  
+		  -h     Displays this message. 
+		  
+		  I can not guarantee that this will work for every app.
+		 
+		 Requirements: 
+		  The well liked CLI command 'fzf' is required for this script.
+		  
+		  You can install it with Homebrew by running 'brew install fzf'.
+		  Find out all about it here: https://github.com/junegunn/fzf
+	EOS
+}
+
+window_names() {
+	osascript <<-OSA
+	tell application "$APP"
+		set _windows to windows
+		set _names to {}
+		repeat with _w in _windows
+			set end of _names to name of _w
+		end repeat
+		set AppleScript's text item delimiters to linefeed
+		get _names as string
+	end tell
+	OSA
+}
+
+window_index(){
+	window_names |
+	cat -n | 
+	fzf --header "Select a $APP Window" --with-nth 2.. --preview 'echo {2..}' | 
+	awk '{print $1}'
+}
+
+shift_windows(){
+	osascript -e "tell application \"$APP\" to set index of window $(window_index) to 1"
+}
+
+if [ "$APP" = -h ]
+then
+	usage
+else	
+	shift_windows
+fi

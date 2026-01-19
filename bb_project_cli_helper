@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+
+usage(){
+	cat <<-EOF
+		 Usage: $(basename "$0") [options]
+		
+		 $(basename "$0") looks for open BBEdit projects and documents and returns a path to their
+		 working directory.
+		 
+		 When the frontmost BBEdit window is a saved project, 
+		 $(basename "$0") prints said project's explicity set root directory, if it exists.
+		 
+		 It will use the Project List in the project window to infer 
+		 the root of the project when a root is not set in the projects settings.
+		 
+		 Insta-projects, which are essecially folders opened by BBEdit, 
+		 will return the path to that folder, also infered from the item list.
+		
+		   -h            Opens this help message.
+		   -d            Prints the working directory of frontmost open document in 
+		                 BBEdit instead of the project's root.
+		   -a <query>    Will display a menu -searchable via fzf- of saved BBEdit projects and 
+		                 will return the root to the project. 
+		   -p <query>    Will return the path to the project file "*.bbprojectd" as 
+		                 selected by a searchable menu.
+		   -a and -p     Require a string as their argument which may be empty.
+		
+		 This script isn't meant to be used directly but instead composed into
+		 your own commands, functions, aliases and key bindings.
+		 
+	EOF
+	cat <<-'EOF'
+		 Examples:
+		  - Move to the root directory of an open project or the document's working directory.
+		  alias bbhere='cd "$(bb_project_cli_helper)" 2> /dev/null || cd "$(bb_project_cli_helper -d)" 2> /dev/null || return 1'
+		 	
+		  - Open a project via fzf and cd into it's root directory.
+		  bbopen(){
+		    local p_path
+		    p_path="$(bb_project_cli_helper -p "")" || return 0
+		    bbedit "$p_path" && cd "$(bb_project_cli_helper)" || return 1
+		  }
+	EOF
+}
+
+install_message(){
+	cat <<-EOF
+		 The well liked CLI command 'fzf' is required for this feature.
+		 It does not appear to be installed.
+		
+		 You can install it with Homebrew by running 'brew install fzf'.
+		 Find out all about it here: https://github.com/junegunn/fzf
+	EOF
+}
+
+decode_file_url(){
+	local url_path path
+	
+	# Remove the 'file://' prefix
+	url_path="${1#file://}"
+	# Replace '+' with ' '
+	url_path="${url_path//+/ }"
+	# Replace '%NN' with the '\\xNN' escape sequence
+	path="${url_path//%/\\x}"
+		
+	printf '%b' "$path\n"
+}
+
+# Safe means that the root of the project have been set in the project's settings.
+# Other saved projects will be filtered out.
+query_safe_projects(){
+	local query
+	query="$1"
+	mdfind 'kMDItemFSName == "*.bbprojectd"' |
+	while IFS= read -r project
+	do
+		if get_wd_from_config "$project" > /dev/null 2>&1
+		then
+			echo "$project"
+		else
+			continue 
+		fi
+	done |
+	fzf \
+		--header="Select a BBEdit Project With a Configured Root" \
+		--query="$query" \
+		--print0
+}
+
+query_all_projects(){	
+	local query
+	query="$1"
+	mdfind 'kMDItemFSName == "*.bbprojectd"' |
+	fzf \
+		--header="Select a BBEdit Project." \
+		--query="$query" \
+		--print0
+}
+
+get_wd_from_config(){
+	local project config_file
+	project="$1"
+	config_file="$project/configuration.plist"
+	
+	# If PlistBuddy can't find the file it doesn't throw an error.
+	# It prints some bullshit message to stdin.
+	[ -f "$config_file" ] || return 1
+	
+	/usr/libexec/PlistBuddy \
+		-c \
+			"Print :workspaceExplicitRootLocator:FileURL" \
+			"$config_file"
+}
+
+get_wd_from_item_list(){
+	local item_depth osa_snippet
+	item_depth="$1"
+	
+	[ "$item_depth" == 1 ] && osa_snippet="item 1"
+	[ "$item_depth" == 2 ] && osa_snippet="item 1 of item 1"
+		
+	osascript <<-OSA
+		tell application "BBEdit"
+			set _URL to URL of $osa_snippet of project document 1
+			set _PATH to POSIX path of _URL
+		end tell
+	OSA
+}
+
+get_wd_from_open_file(){
+	local file_url file_path
+	file_url="$(osascript -e 'tell application "BBEdit" to get URL of document 1')"
+	
+	[[ "$file_url" =~ Scratchpad\.txt$ ]] &&
+	echo "This is your project's ScratchPad." &&
+	exit 1
+	
+	[[ "$file_url" =~ Unix%20Worksheet\.worksheet$ ]] &&
+	echo "This is your project's Unix Worksheet." &&
+	exit 1
+
+	[[ "$file_url" =~ Chat%20Worksheet\.bbaiworksheet$ ]] &&
+	echo "Leave me alone. --Skynet" &&
+	exit 1
+	
+	file_path=$(decode_file_url "${file_url%/*}")
+	
+	[ "$file_path" == "missing value" ] || 
+	[[ "$file_path" =~ \.bbprojectd$ ]] && 
+	echo "Document is not open, or is not saved." &&
+	exit 1
+	
+	echo "$file_path"
+}
+
+project(){
+	local proj_name item_depth query selected_project
+	proj_name="$1"
+	[ "$2" == "saved" ] || [ "$2" == "insta" ] || return 1
+	[ "$2" == "insta" ] && item_depth=1
+	[ "$2" == "saved" ] && item_depth=2
+	
+	query="$3"
+	
+	if [ "$proj_name" == "" ]
+	then
+		# Using exit 0 so that the ESC key can be used to cancel in fzf window.
+		selected_project="$(query_safe_projects "$query")" || exit 1
+	else
+		selected_project="$(mdfind -name "$proj_name" 2>&1 | grep -v UserQueryParser)"
+	fi
+	
+	wd_url="$(get_wd_from_config "$selected_project" 2> /dev/null || get_wd_from_item_list $item_depth)"
+	decode_file_url "$wd_url"
+}
+
+main(){
+	local proj_name
+	
+	while getopts ":hdp:a:" option; do
+		case $option in
+			h) # Display help.
+				echo
+				usage
+				echo
+				return
+				;;
+			d) # Return working directory of frontmost open document not the project.
+				get_wd_from_open_file
+				return
+				;;
+			p) # Returns path to project from query of all projects.
+				command -v fzf > /dev/null || { install_message; return 1; }
+				
+				query_all_projects "$2" || exit 1
+				return
+				;;
+			a) # Return root of project from query of projects with a explicitly set root.
+				command -v fzf > /dev/null || { install_message; return 1; }
+				
+				project "" "saved" "$2"
+				return
+				;;
+			?) # Incorrect option.
+				echo
+				echo "----------------------"
+				echo "Error: Invalid flag -$OPTARG"
+				echo "----------------------"
+				echo
+				usage
+				return 1
+				;;
+		esac
+	done
+	
+	# BBEdit has three kinds of projects, (1)untitled..., (2)insta..., and (3)saved...
+		# 1) A window with one or more open tabs.
+		# 2) A folder that has been opened, but not saved as a .bbprojectd bundle.
+		# 3) A saved project is on disk as a macOS bundle ending in .bbprojectd
+	proj_name="$(osascript -e 'tell application "BBEdit" to get name of project document 1')"
+	
+	case "$proj_name" in
+		# Saved Project
+		*.bbprojectd)
+			project "$proj_name" "saved"
+			;;
+		# Untitled Project
+		untitled\ project*)
+			get_wd_from_open_file
+			;;
+		# Insta Project
+		*)
+			project "$proj_name" "insta"
+			;;
+	esac
+}
+
+main "$@"
