@@ -4,7 +4,7 @@
 
 This script isn't meant to be used directly but instead composed into your own commands, functions, aliases and key bindings.
 
-All I wanted to do really, was run a short command to zip to my terminal to an open projects root directory. I also really wanted to mess around with fzf.
+All I wanted really, was a short command that would `cd` to the open projects root directory. I also really wanted to mess around with fzf. I think I ended up more flexible and useful than that.
 
 ![Terminal and BBEdit project. Running a bbhere command.](project_terminal.png)
 
@@ -45,7 +45,7 @@ Insta-projects, which are essecially folders opened by BBEdit, will return the p
 - **-a=query:**
   Will display a menu -searchable via fzf- of saved BBEdit projects. This menu will be limited projects with a set root. The selected project will return the root to the project.
 - **-p=query:**
-  Will return the path to the project file "*.bbprojectd" as selected by a searchable menu.
+  Will return the path to the project file "\*.bbprojectd" as selected by a searchable menu.
 - **-a and -p:**
   Require a string as their argument which may be empty.
 
