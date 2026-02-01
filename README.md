@@ -1,10 +1,10 @@
 # BB Project CLI Helper
 
-*BB Project CLI Helper* -*That’s a mouth full*- returns the root directory of (usually open) BBEdit projects from your terminal prompt.
+*BB Project CLI Helper* -*That’s a mouth full*- returns the root directory of the open (*usually)* BBEdit projects from your terminal prompt.
 
 This script isn't meant to be used directly but instead composed into your own commands, functions, aliases and key bindings.
 
-All I wanted really, was a short command that would `cd` to the root directory of the projects open in BBEdit. I also really wanted to mess around with fzf. I think I ended up with a thing more flexible and useful than that.
+All I wanted really, was a short command that would `cd` to the root directory of the project open in BBEdit. I also really wanted to mess around with fzf. I think I ended up with a thing more flexible and useful than that.
 
 ![Terminal and BBEdit project. Running a bbhere command.](project_terminal.png)
 
@@ -15,6 +15,11 @@ All I wanted really, was a short command that would `cd` to the root directory o
 - [FZF](https://github.com/junegunn/fzf), install it with Homebrew by running `brew install fzf`.
 
 - I developed this on MacOS Sequoia (15.x.x).
+
+> [!NOTE]
+> FZF isn’t strictly required.  
+> It is required while using the -a or -p flags.  
+> Those features are detailed below.  
 
 ## Installation
 

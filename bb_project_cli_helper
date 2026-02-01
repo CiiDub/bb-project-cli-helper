@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# BBEdit has three kinds of projects, (1)untitled..., (2)insta..., and (3)saved...
+	# 1) A window with one or more open tabs.
+	# 2) A folder that has been opened, but not saved as a .bbprojectd bundle.
+	# 3) A saved project is on disk as a macOS bundle ending in .bbprojectd
+
 if command -v bb_project_previewer > /dev/null 2>&1
 then	
 	PREVIEW_COMMAND="bb_project_previewer {}"
@@ -176,6 +181,7 @@ project(){
 		# Using exit 1 so that the ESC key can be used to cancel in fzf window.
 		selected_project="$(query_safe_projects "$query")" || exit 1
 	else
+		# The grep is to remove an erroneous warning/error from the mfind output.
 		selected_project="$(mdfind -name "$proj_name" 2>&1 | grep -v UserQueryParser)"
 	fi
 	
@@ -222,10 +228,6 @@ main(){
 		esac
 	done
 	
-	# BBEdit has three kinds of projects, (1)untitled..., (2)insta..., and (3)saved...
-		# 1) A window with one or more open tabs.
-		# 2) A folder that has been opened, but not saved as a .bbprojectd bundle.
-		# 3) A saved project is on disk as a macOS bundle ending in .bbprojectd
 	proj_name="$(osascript -e 'tell application "BBEdit" to get name of project document 1')"
 	
 	case "$proj_name" in
