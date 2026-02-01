@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+if command -v bb_project_previewer > /dev/null 2>&1
+then	
+	PREVIEW_COMMAND="bb_project_previewer {}"
+else
+	PREVIEW_COMMAND=""
+fi
+
 usage(){
 	cat <<-EOF
 		 Usage: $(basename "$0") [options]
@@ -84,6 +91,7 @@ query_safe_projects(){
 	fzf \
 		--header="Select a BBEdit Project With a Configured Root" \
 		--query="$query" \
+		--preview "$PREVIEW_COMMAND" \
 		--print0
 }
 
@@ -94,6 +102,7 @@ query_all_projects(){
 	fzf \
 		--header="Select a BBEdit Project." \
 		--query="$query" \
+		--preview "$PREVIEW_COMMAND" \
 		--print0
 }
 
@@ -102,7 +111,7 @@ get_wd_from_config(){
 	project="$1"
 	config_file="$project/configuration.plist"
 	
-	# If PlistBuddy can't find the file it doesn't throw an error.
+	# If PlistBuddy can't find the file it doesn't print an error.
 	# It prints some bullshit message to stdin.
 	[ -f "$config_file" ] || return 1
 	
@@ -164,7 +173,7 @@ project(){
 	
 	if [ "$proj_name" == "" ]
 	then
-		# Using exit 0 so that the ESC key can be used to cancel in fzf window.
+		# Using exit 1 so that the ESC key can be used to cancel in fzf window.
 		selected_project="$(query_safe_projects "$query")" || exit 1
 	else
 		selected_project="$(mdfind -name "$proj_name" 2>&1 | grep -v UserQueryParser)"

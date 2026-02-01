@@ -4,7 +4,7 @@
 
 This script isn't meant to be used directly but instead composed into your own commands, functions, aliases and key bindings.
 
-All I wanted really, was a short command that would `cd` to the open projects root directory. I also really wanted to mess around with fzf. I think I ended up more flexible and useful than that.
+All I wanted really, was a short command that would `cd` to the root directory of the projects open in BBEdit. I also really wanted to mess around with fzf. I think I ended up with a thing more flexible and useful than that.
 
 ![Terminal and BBEdit project. Running a bbhere command.](project_terminal.png)
 
@@ -19,9 +19,17 @@ All I wanted really, was a short command that would `cd` to the open projects ro
 ## Installation
 
 1. Copy to a dir accessable by the users PATH. Such as /usr/local/bin.  
-  `$ cp bb_project_cli_helper.sh /usr/local/bin/bb_project_cli_helper`
+  `$ cp bb_project_cli_helper /usr/local/bin/bb_project_cli_helper`
 1. Make the script executable.  
   `$ chmod 755 /usr/local/bin/bb_project_cli_helper`
+
+> [!NOTE]
+> **Optional Project Preview Script**:  
+> Adds a preview for BBEdit projects to the fzf menues.  
+> It displays Project Name, Root path and contents if the root is set.  
+> Install *bb_project_previewer* and the main script will use it.  
+> ![A fzf menue with and without project Preview](previewer.png)
+
 
 ## Usage
 **When used without any options:**

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+decode_file_url(){
+	local url_path path
+	
+	# Remove the 'file://' prefix
+	url_path="${1#file://}"
+	# Replace '+' with ' '
+	url_path="${url_path//+/ }"
+	# Replace '%NN' with the '\\xNN' escape sequence
+	path="${url_path//%/\\x}"
+		
+	printf '%b' "$path\n"
+}
+
+get_wd_from_config(){
+	local project config_file
+	project="$1"
+	config_file="$project/configuration.plist"
+	
+	# If PlistBuddy can't find the file it doesn't throw an error.
+	# It prints some bullshit message to stdin.
+	[ -f "$config_file" ] || return 1
+	
+	/usr/libexec/PlistBuddy \
+		-c \
+			"Print :workspaceExplicitRootLocator:FileURL" \
+			"$config_file"
+}
+
+preview_dir(){
+  if command -v eza > /dev/null
+  then
+    eza -TF -L 1 -rs modified --color=always "$1" |
+    awk 'NR > 1 { print }'
+  elif command -v tree > /dev/null
+  then
+    tree -L 1 -C "$1" |
+    awk 'NR > 1 { print }'
+  else 
+    ls -1 -tF --color=always "$1" |
+    awk 'NR > 1 { print "├── " prev }; { prev=$0 }; END{ print "└── " prev }'
+  fi
+}
+
+main(){  
+  local root_dir path name
+  root_dir=$(get_wd_from_config "$1" 2> /dev/null || echo "")
+  name=$(basename "$1" .bbprojectd)
+  if [ -n "$root_dir" ]
+  then
+    path=$(decode_file_url "$root_dir")
+    echo -e "Project: \033[1;34m$name\033[0m" 
+    echo 
+    echo -e "Root Dir: \033[1;34m$path\033[0m"
+    preview_dir "$path"
+  else
+    echo -e "Project: \033[1;34m$name\033[0m" 
+    echo
+    echo -e "Root Dir: \033[0;31mNo root has been set.\033[0m"
+    echo "You can set this by opening the project in BBEdit."
+    echo "Selecting the project in the sidebar."
+    echo "Look for Root directory: under Workspace Settings."
+  fi
+}
+
+main "$@"
