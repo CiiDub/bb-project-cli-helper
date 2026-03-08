@@ -43,7 +43,7 @@ window_index(){
 }
 
 shift_windows(){
-	osascript -e "tell application \"$APP\" to set index of window $(window_index) to 1"
+	osascript -e "tell application \"$APP\" to set index of window $(window_index) to 1" > "/dev/null"
 }
 
 if [ "$APP" = -h ]
