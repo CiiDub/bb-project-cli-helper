@@ -1,0 +1,9 @@
+#!/usr/bin/env osascript
+
+tell application "Finder"
+	if ((count of windows) is 0) then
+		get POSIX path of (path to desktop)
+	else
+		get POSIX path of (target of window 1 as alias)
+	end if
+end tell
