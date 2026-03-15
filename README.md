@@ -90,7 +90,21 @@ Open a BBEdit project via fzf and cd into it's root directory.
 ```
 
 > [!NOTE]
-> **Bonus Script:** Pass *window_forward* the name of a running app and it will provide you with a list of it’s open windows. Make a selection and it will set the window as the frontmost for that app. Try something like: `$ window_forward "BBEdit" && cd $(bb_project_cli_helper)`
+> **Bonus Scripts:** Pass *window_forward* the name of a running app and it will provide you with a list of it’s open windows. Make a selection and it will set the window as the frontmost for that app. Try something like: `$ window_forward "BBEdit" && cd $(bb_project_cli_helper)`
 > 
 > Use *finder_folder_or_desktop* to return the path for the open Finder folder. It returns the desktop if no folders are open.
+> 
+> I put them together like this on my mac.
+> 
+> ``` fish
+>  function here -d "Changes terminal directory to open Finder folder or desktop"
+>    set -l flag
+>    # -w flag brings up a fzf menu with available finder windows/folders
+>    if string match -q -- '-w' $argv[1]
+>      set flag "Finder"
+>      window_forward $flag
+>    end
+>    cd (finder_folder_or_desktop)
+>  end
+> ```
 
