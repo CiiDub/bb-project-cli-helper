@@ -228,7 +228,7 @@ main(){
 		esac
 	done
 	
-	proj_name="$(osascript -e 'tell application "BBEdit" to get name of project document 1')"
+	proj_name="$(osascript -e 'tell application "BBEdit" to get name of project document 1' 2> /dev/null)"
 	
 	case "$proj_name" in
 		# Saved Project
